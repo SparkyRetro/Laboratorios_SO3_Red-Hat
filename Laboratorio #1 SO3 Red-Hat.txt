@@ -58,3 +58,6 @@ Practica 4: Gestion de Permisos de archivos
 > sudo cp nombre_de_directorio/nombre_de_archivo.txt nombre_de_directorio/
 
 > rm -rf nombre_de_directorio
+
+link de la playlist de youtube
+https://www.youtube.com/playlist?list=PL39ueDYTUKTdZEJMyTl5ywn1_-E16y5Al
