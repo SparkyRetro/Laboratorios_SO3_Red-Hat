@@ -1,0 +1,60 @@
+Practica 1: Instalacion del Sistema Operativo RedHat
+
+
+NO SE USARON COMANDOS EN LA INSTALACION DE RED HAT
+
+
+Practica 2: Configuración de parametros de red.
+
+> nmcli device status
+
+-configuracion con DHCP-
+
+> nmcli connection modify enp0s3 ipv4.method auto
+> nmcli connection modify enp0s3 ipv4.dns "8.8.8.8 8.8.4.4"
+> nmcli connection up enp0s3
+
+-Configuracion con ip estatica-
+
+> nmcli connection modify enp0s3 ipv4.method manual ipv4.addresses 192.168.1.50/24
+> nmcli connection modify enp0s3 ipv4.gateway 192.168.1.1
+> nmcli connection modify enp0s3 ipv4.dns "8.8.8.8 8.8.4.4"
+> nmcli connection up enp0s3
+
+-Confiduracion con nmtui-
+> nmtui
+
+esto es grafico asique es intuitivo todo
+
+
+
+Practica 3: Gestion de Usuario y grupos
+
+> sudo useradd nombre_de_usuario
+> sudo passwd nombre_de_usuario
+> sudo usermod -aG whell nombre_de_usuario
+
+> id nombre_de_usuario
+
+> sudo groupadd nombre_de_grupo
+> sudo useradd -g nombre_de_grupo nombre_de_usuario
+> sudo passwd nombre_de_usuario
+
+> sudo userdel -r nombre_de_usuario
+> sudo groupdel nombre_de_grupo
+
+
+Practica 4: Gestion de Permisos de archivos
+
+> mkdir nombre_de_directorio
+> cd nombre_de_directorio
+> vi nombre_de_archivo.txt
+
+> chmod 700 nombre_de_archivo.txt
+> chmod 070 nombre_de_archivo.txt
+
+> cd ..
+> mkdir nombre_de_directorio
+> sudo cp nombre_de_directorio/nombre_de_archivo.txt nombre_de_directorio/
+
+> rm -rf nombre_de_directorio
