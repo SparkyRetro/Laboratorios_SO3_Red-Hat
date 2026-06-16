@@ -1,0 +1,158 @@
+===============================================================================
+                       RECOPILACIÓN COMPLETA DE COMANDOS
+                  PRÁCTICAS DE ADMINISTRACIÓN Y REDES EN LINUX
+===============================================================================
+
+-------------------------------------------------------------------------------
+PRÁCTICA 1: CONFIGURACIÓN DE GRUB Y RECUPERACIÓN DE CONTRASEÑA ROOT
+-------------------------------------------------------------------------------
+
+1. Editar el archivo de configuración principal de GRUB:
+   $ sudo nano /etc/default/grub
+   --> Explicación: Abre el editor de texto 'nano' con privilegios de 
+       administrador (sudo) para modificar las directivas de arranque del 
+       sistema, donde se cambia el valor de 'GRUB_TIMEOUT' a '20'.
+
+2. Actualizar los cambios en el cargador de arranque GRUB:
+   * En sistemas basados en Debian/Ubuntu:
+     $ sudo update-grub
+   * En sistemas basados en RHEL/Red Hat/Fedora:
+     $ sudo grub2-mkconfig -o /boot/grub2/grub.cfg
+   --> Explicación: Procesa el archivo modificado previamente y regenera el 
+       menú de arranque real que lee el equipo al encender para aplicar los 
+       20 segundos de espera.
+
+3. Volver a montar el sistema de archivos con permisos de escritura (Modo Rescate):
+   # mount -o remount,rw /
+   --> Explicación: Se ejecuta tras interrumpir el arranque e iniciar con el 
+       parámetro 'init=/bin/bash'. Por defecto, el sistema arranca seguro en 
+       modo "solo lectura" (ro); este comando lo cambia a "lectura y escritura" 
+       (rw) para poder guardar modificaciones.
+
+4. Cambiar la contraseña del usuario root:
+   # passwd root
+   --> Explicación: Invoca el asistente interactivo en la terminal para asignar 
+       e introducir una nueva contraseña al superusuario administrador (root).
+
+5. Forzar el reetiquetado de contextos de seguridad en SELinux (Mandatorio en Red Hat):
+   # touch /.autorelabel
+   --> Explicación: Crea un archivo oculto en la raíz que le indica a SELinux, 
+       durante el próximo reinicio normal, que debe actualizar las etiquetas de 
+       seguridad del archivo de contraseñas modificado fuera del entorno seguro.
+
+6. Reiniciar el sistema de forma forzada desde la shell de emergencia:
+   # exec /sbin/init
+   --> Explicación: Reemplaza la shell de comandos temporal de bash y carga el 
+       proceso de inicialización estándar del sistema operativo para arrancar 
+       normalmente.
+
+
+-------------------------------------------------------------------------------
+PRÁCTICA 2: AUTOMATIZACIÓN MEDIANTE SCRIPTS EN BASH
+-------------------------------------------------------------------------------
+
+1. Asignar permisos de ejecución a los archivos de script creados:
+   $ chmod +x backup.sh
+   $ chmod +x guardar_red.sh
+   --> Explicación: Modifica los atributos del archivo de texto añadiendo el 
+       permiso de ejecución (+x), permitiendo al sistema operativo tratar el 
+       script como un programa ejecutable.
+
+2. Lanzar o probar el script en el directorio actual:
+   $ ./backup.sh
+   $ ./guardar_red.sh
+   --> Explicación: El prefijo './' le indica explícitamente al intérprete de 
+       comandos que busque y ejecute el archivo dentro del directorio actual de 
+       trabajo.
+
+3. Explicación de los comandos internos utilizados dentro de los scripts (.sh):
+
+   * USUARIO=$(whoami)
+     --> Explicación: Ejecuta el comando 'whoami' para saber qué usuario está 
+         corriendo el script y guarda dinámicamente ese texto en la variable 'USUARIO'.
+
+   * FECHA_HORA=$(date +"%d-%m-%Y:%H:%M")
+     --> Explicación: Captura el tiempo del sistema y lo formatea estrictamente 
+         en formato día-mes-año:hora:minuto, guardando el resultado en una variable.
+
+   * tar -czf "/tmp/$NOMBRE_ARCHIVO" "/home/$USUARIO" 2>/dev/null
+     --> Explicación: El comando 'tar' empaqueta y comprime en formato gzip (-czf) 
+         toda la carpeta personal del usuario, guardándola en la ruta temporal 
+         '/tmp'. El fragmento '2>/dev/null' silencia y descarta cualquier aviso 
+         de error menor (como archivos ocultos bloqueados) para no ensuciar la pantalla.
+
+   * mkdir -p "$HOME/Escritorio"
+     --> Explicación: Crea la carpeta del Escritorio dentro del directorio personal 
+         del usuario. El parámetro '-p' evita que el script falle o de un error 
+         si la carpeta ya existía previamente.
+
+   * read -r NOMBRE_ARCHIVO
+     --> Explicación: Detiene la ejecución del script temporalmente para esperar 
+         a que el usuario digite un nombre por teclado, capturando el texto en la 
+         variable 'NOMBRE_ARCHIVO'.
+
+   * ifconfig > "$HOME/Escritorio/$NOMBRE_ARCHIVO.txt"
+     --> Explicación: Ejecuta la herramienta de diagnóstico de red 'ifconfig' y, 
+         mediante el operador de redirección '>', envía todo su reporte directamente 
+         a un archivo de texto plano creado en el escritorio con el nombre provisto.
+
+
+-------------------------------------------------------------------------------
+PRÁCTICA 3: CONEXIÓN REMOTA SSH Y AUTENTICACIÓN ASIMÉTRICA POR LLAVES
+-------------------------------------------------------------------------------
+
+1. Verificar la conectividad básica de red (Desde el CMD de Windows):
+   > ping 10.0.0.67
+   --> Explicación: Envía paquetes de prueba ICMP desde la máquina física hacia 
+       la IP de la máquina virtual para constatar que el modo Puente (Bridge) 
+       está respondiendo y que ambos equipos se ven mutuamente.
+
+2. Habilitar, iniciar y verificar el daemon de SSH (Desde la terminal de Linux):
+   $ sudo systemctl enable sshd
+   $ sudo systemctl start sshd
+   $ sudo systemctl status sshd
+   --> Explicación: Configura el servicio de SSH para que se levante de forma 
+       automática en cada arranque del servidor (enable), arranca el servicio 
+       remoto de forma inmediata en segundo plano (start) y muestra el estado 
+       operativo actual en tiempo real (status).
+
+3. Conexión SSH tradicional inicial por contraseña (Desde el CMD de Windows):
+   > ssh A20252751@10.0.0.67
+   --> Explicación: Realiza la primera llamada remota hacia el servidor bajo el 
+       usuario 'A20252751'. Al ser la primera vez, almacena el registro del 
+       servidor en el host físico y exige el ingreso manual de la contraseña.
+
+4. Generar el par de llaves criptográficas (Desde el CMD de Windows):
+   > ssh-keygen -t rsa -b 4096
+   --> Explicación: Genera una llave privada y una pública bajo el algoritmo RSA 
+       con una longitud robusta de 4096 bits. Al presionar 'Enter' a las peticiones 
+       de passphrase, se asegura que no requiera clave para automatizar el login.
+
+5. Visualizar las llaves generadas localmente (Desde el CMD de Windows):
+   > dir "%USERPROFILE%\.ssh"
+   --> Explicación: Lista el contenido del directorio oculto de configuraciones 
+       SSH de Windows para validar la existencia física de 'id_rsa' (llave privada) 
+       e 'id_rsa.pub' (llave pública).
+
+6. Transferir e indexar la llave pública en el servidor (Desde el CMD de Windows):
+   > type "%USERPROFILE%\.ssh\id_rsa.pub" | ssh A20252751@10.0.0.67 "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+   --> Explicación: Comando compuesto de alta eficiencia:
+       - 'type': Lee la llave pública en Windows.
+       - '|': Envía la llave a través del túnel SSH directo al servidor.
+       - 'mkdir -p ~/.ssh && chmod 700 ~/.ssh': Crea la carpeta de llaves en 
+         Linux y restringe el acceso absoluto a otros usuarios.
+       - 'cat >> ~/.ssh/authorized_keys': Agrega la clave de Windows al archivo 
+         de llaves autorizadas en el servidor.
+       - 'chmod 600 ~/.ssh/authorized_keys': Otorga permisos estrictos de lectura 
+         y escritura única al propietario, requisito mandatorio para habilitar 
+         el inicio de sesión automático.
+
+7. Validación de acceso directo automático sin contraseña (Desde el CMD de Windows):
+   > ssh A20252751@10.0.0.67
+   --> Explicación: Comando final de ejecución. Al estar indexada la llave, 
+       las máquinas realizan un intercambio criptográfico transparente, permitiendo 
+       el acceso directo a la consola de Red Hat sin solicitar credenciales.
+===============================================================================
+LINK DE LA PLAYLIST
+===============================================================================
+https://www.youtube.com/playlist?list=PL39ueDYTUKTdotGtmaey5vE3UZ2WGjify
