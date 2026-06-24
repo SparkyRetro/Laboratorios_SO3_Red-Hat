@@ -1,0 +1,137 @@
+#############################################################################
+# PRÁCTICA 1: INSTALAR UN SERVIDOR HTTP APACHE2
+#############################################################################
+
+# 1. Actualizar repositorios e instalar Apache (httpd)
+sudo dnf update -y
+sudo dnf install httpd -y
+
+# 2. Crear las estructuras de directorios para ambos sitios
+sudo mkdir -p /var/www/html/puerto80
+sudo mkdir -p /var/www/html/puerto8080
+
+# 3. Crear el sitio estático para el Puerto 80 (Hola Mundo)
+echo "<h1>Hola Mundo</h1>" | sudo tee /var/www/html/puerto80/index.html
+
+# 4. Crear el sitio estático para el Puerto 8080 (Datos Personales)
+echo "<h1>Angelo Marcelo Cerda Javier - 2025-2751 - Seguridad Informatica</h1>" | sudo tee /var/www/html/puerto8080/index.html
+
+# 5. Configurar los permisos correctos y contextos de seguridad de SELinux
+sudo chown -R apache:apache /var/www/html/puerto80
+sudo chown -R apache:apache /var/www/html/puerto8080
+sudo chmod -R 755 /var/www/html/puerto80
+sudo chmod -R 755 /var/www/html/puerto8080
+sudo restorecon -R -v /var/www/html/
+
+# 6. Crear el archivo de configuración de Hosts Virtuales
+# Ruta: /etc/httpd/conf.d/practica1.conf
+sudo tee /etc/httpd/conf.d/practica1.conf << 'EOF'
+# Configuración de escucha de puertos
+Listen 80
+Listen 8080
+
+# Host Virtual - Puerto 80 (Hola Mundo)
+<VirtualHost *:80>
+    DocumentRoot "/var/www/html/puerto80"
+    ServerName localhost
+    <Directory "/var/www/html/puerto80">
+        AllowOverride None
+        Require all granted
+    </Directory>
+</VirtualHost>
+
+# Host Virtual - Puerto 8080 (Datos Personales)
+<VirtualHost *:8080>
+    DocumentRoot "/var/www/html/puerto8080"
+    ServerName localhost
+    <Directory "/var/www/html/puerto8080">
+        AllowOverride None
+        Require all granted
+    </Directory>
+</VirtualHost>
+EOF
+
+# 7. Agregar el puerto 8080 a las políticas de red de SELinux (Puerto no estándar)
+sudo semanage port -a -t http_port_t -p tcp 8080
+
+# 8. Configurar el Firewall para permitir el tráfico en ambos puertos
+sudo firewall-cmd --permanent --add-port=80/tcp
+sudo firewall-cmd --permanent --add-port=8080/tcp
+sudo firewall-cmd --reload
+
+# 9. Habilitar e iniciar el servicio de Apache
+sudo systemctl enable --now httpd
+
+# 10. Verificación local de los sitios
+curl http://localhost:80
+curl http://localhost:8080
+
+
+#############################################################################
+# PRÁCTICA 2: INSTALAR UN SERVIDOR DE CORREOS (POSTFIX)
+#############################################################################
+
+# 1. Instalar Postfix y utilidades de correo (mailx)
+sudo dnf install postfix mailx -y
+
+# 2. Hacer una copia de seguridad del archivo de configuración original
+sudo cp /etc/postfix/main.cf /etc/postfix/main.cf.bak
+
+# 3. Configurar los parámetros esenciales en /etc/postfix/main.cf
+sudo postconf -e "myhostname = mail.itla.edu.do"
+sudo postconf -e "mydomain = itla.edu.do"
+sudo postconf -e "myorigin = \$mydomain"
+sudo postconf -e "inet_interfaces = all"
+sudo postconf -e "inet_protocols = all"
+sudo postconf -e "mydestination = \$myhostname, localhost.\$mydomain, localhost"
+
+# 4. Habilitar y arrancar el servicio de Postfix
+sudo systemctl enable --now postfix
+
+# 5. Configurar el Firewall para el servicio SMTP
+sudo firewall-cmd --permanent --add-service=smtp
+sudo firewall-cmd --reload
+
+# 6. Enviar el correo de prueba solicitado al docente
+# Asunto obligatorio: MambruSeFueALaGuerra
+# Destinatario: os3conadrian@gmail.com
+# Cuerpo: Nombre y Matrícula
+echo "Angelo Marcelo Cerda Javier - Matricula: 2025-2751" | mail -s "MambruSeFueALaGuerra" os3conadrian@gmail.com
+
+
+#############################################################################
+# PRÁCTICA 3: INSTALAR UN SERVIDOR DE IMPRESIÓN (CUPS)
+#############################################################################
+
+# 1. Instalar el sistema de impresión CUPS y el módulo de impresión a PDF
+sudo dnf install cups cups-pdf -y
+
+# 2. Hacer copia de respaldo de la configuración de CUPS
+sudo cp /etc/cups/cupsd.conf /etc/cups/cupsd.conf.bak
+
+# 3. Configurar CUPS para escuchar en todas las interfaces de red (Puerto 631)
+sudo sed -i 's/Listen localhost:631/Port 631/' /etc/cups/cupsd.conf
+
+# 4. Permitir acceso a la red local dentro del archivo de configuración
+# Modifica las secciones principales para autorizar la administración remota
+sudo cupsctl --remote-admin --remote-any --share-printers
+
+# 5. Iniciar y habilitar el servicio CUPS
+sudo systemctl enable --now cups
+
+# 6. Configurar el Firewall para permitir el tráfico de red de CUPS
+sudo firewall-cmd --permanent --add-port=631/tcp
+sudo firewall-cmd --reload
+
+# 7. Crear la impresora virtual PDF por línea de comandos compartida en la red
+sudo lpadmin -p Impresora_Virtual_PDF -v cups-pdf:/ -E -m everywhere
+
+# 8. Nota para despliegue en cliente (Windows / Word):
+# - Dirección de red para conectar la impresora en el cliente de Windows:
+#   http://<IP_DEL_SERVIDOR>:631/printers/Impresora_Virtual_PDF
+# - Los documentos impresos como PDF se guardarán en el servidor en:
+#   /var/spool/cups-pdf/ANONYMOUS/
+#############################################################################
+PLAYLIST DE YOUTUBE
+=============================================================================
+https://www.youtube.com/playlist?list=PL39ueDYTUKTcGTLHHXIWoROLcxs_FDWyM
