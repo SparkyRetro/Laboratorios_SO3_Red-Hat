@@ -1,0 +1,162 @@
+=============================================================================
+PRACTICA 1: SINCRONIZACIÓN DE CARPETAS CON RSYNC Y CRONTAB
+=============================================================================
+
+# [En Servidor Primario]
+# 1. Crear la carpeta y generar los 100 archivos
+mkdir -p ~/sincronizacion
+touch ~/sincronizacion/archivo{1..100}.txt
+
+# 2. Copiar inicialmente el contenido al servidor remoto para validar conectividad
+# (Reemplazar 'usuario' e 'IP_REMOTO' con los datos correspondientes)
+rsync -avz ~/sincronizacion/ usuario@IP_REMOTO:~/sincronizacion_remota/
+
+# 3. Crear el script de automatización
+cat << 'EOF' > ~/sync_script.sh
+#!/bin/bash
+rsync -avz --delete ~/sincronizacion/ usuario@IP_REMOTO:~/sincronizacion_remota/
+EOF
+
+# Asignar permisos de ejecución al script
+chmod +x ~/sync_script.sh
+
+# 4. Configurar el Crontab para ejecutarse cada 1 minuto
+# Ejecutar 'crontab -e' y añadir la siguiente línea al final:
+* * * * * /bin/bash /home/usuario/sync_script.sh
+
+# 5. Prueba de validación
+# Crear un nuevo archivo en el servidor primario:
+touch ~/sincronizacion/archivo_prueba_cron.txt
+
+# [En Servidor Secundario]
+# Esperar 1 minuto y verificar que el archivo se haya sincronizado:
+ls -la ~/sincronizacion_remota/
+
+
+=============================================================================
+PRACTICA 2: INSTALACIÓN Y CONFIGURACIÓN DEL CLUSTER (PACEMAKER + COROSYNC)
+=============================================================================
+
+# [En Ambos Nodos - Configuración Inicial]
+# 1. Actualizar el sistema e instalar los paquetes del cluster
+sudo apt update
+sudo apt install -y pacemaker corosync pcs
+
+# 2. Habilitar e iniciar el servicio del sistema de configuración del cluster (pcsd)
+sudo systemctl enable --now pcsd
+
+# 3. Establecer contraseña para el usuario por defecto del cluster 'hacluster'
+echo "hacluster:PASSWORD_SEGURO" | sudo chpasswd
+
+# [Solo en el Nodo 1 - Configuración del Cluster]
+# 4. Autenticar los nodos del cluster
+sudo pcs host auth nodo1 nodo2 -u hacluster -p PASSWORD_SEGURO
+
+# 5. Generar y configurar el cluster con Corosync
+sudo pcs cluster setup mi_cluster nodo1 nodo2 --force
+
+# 6. Iniciar y habilitar todos los servicios del cluster en los nodos
+sudo pcs cluster start --all
+sudo pcs cluster enable --all
+
+# 7. Deshabilitar STONITH (si no se cuenta con dispositivo de vallado en el lab)
+sudo pcs property set stonith-enabled=false
+sudo pcs property set no-quorum-policy=ignore
+
+# 8. Configurar la IP Flotante (Virtual IP)
+# (Reemplazar '192.168.1.200' por la IP flotante asignada en el segmento bridge)
+sudo pcs resource create IP_Flotante ocf:heartbeat:IPaddr2 ip=192.168.1.200 cidr_netmask=24 op monitor interval=30s
+
+# 9. Verificar el estado del cluster y los recursos activos
+sudo pcs status
+
+# [Prueba de Validación]
+# Desde una máquina externa, mantener un ping constante a la IP flotante:
+# ping 192.168.1.200 -t
+# Reiniciar el Nodo 1 ('sudo reboot') y validar que el ping continúe respondiendo a través del Nodo 2.
+
+
+=============================================================================
+PRACTICA 3: CLUSTER DE ALTA DISPONIBILIDAD HTTP CON KEEPALIVED
+=============================================================================
+
+# [En Ambos Servidores Web]
+# 1. Instalar el servidor web Apache y Keepalived
+sudo apt update
+sudo apt install -y apache2 keepalived
+
+# 2. Desplegar el archivo HTML identificando cada servidor
+
+# [En Servidor 1]
+echo "<h1>Bienvenido a Server 1</h1>" | sudo tee /var/www/html/index.html
+
+# [En Servidor 2]
+echo "<h1>Bienvenido a Server 2</h1>" | sudo tee /var/www/html/index.html
+
+
+# 3. Configuración de Keepalived
+
+# [En Servidor 1 - MASTER]
+sudo cat << 'EOF' > /etc/keepalived/keepalived.conf
+vrrp_script chk_apache {
+    script "/usr/bin/killall -0 apache2"
+    interval 2
+}
+
+vrrp_instance VI_1 {
+    state MASTER
+    interface eth0           # Colocar el nombre de la interfaz de red activa
+    virtual_router_id 51
+    priority 101             # Prioridad más alta para el Master
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass 12345
+    }
+    virtual_ipaddress {
+        192.168.1.250        # Dirección IP flotante para el servicio HTTP
+    }
+    track_script {
+        chk_apache
+    }
+}
+EOF
+
+# [En Servidor 2 - BACKUP]
+sudo cat << 'EOF' > /etc/keepalived/keepalived.conf
+vrrp_script chk_apache {
+    script "/usr/bin/killall -0 apache2"
+    interval 2
+}
+
+vrrp_instance VI_1 {
+    state BACKUP
+    interface eth0           # Colocar el nombre de la interfaz de red activa
+    virtual_router_id 51
+    priority 100             # Prioridad más baja para el Backup
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass 12345
+    }
+    virtual_ipaddress {
+        192.168.1.250        # Dirección IP flotante para el servicio HTTP
+    }
+    track_script {
+        chk_apache
+    }
+}
+EOF
+
+# 4. Iniciar y habilitar Keepalived en ambos servidores
+sudo systemctl enable --now keepalived
+
+# [Prueba de Validación]
+# Acceder desde el navegador a la IP flotante: http://192.168.1.250 (Debe mostrar Server 1)
+# Detener el servicio de Apache en el Servidor 1 ('sudo systemctl stop apache2')
+# Recargar el navegador; la IP flotante debe responder ahora con el contenido de Server 2.
+
+===========================================================================================
+Playlist de Youtube
+===========================================================================================
+https://www.youtube.com/playlist?list=PLHUfzZF1KP7U
